@@ -1,4 +1,5 @@
 % 对匹配的数据进行 RANSAC ransac 使用 DLT 模型
+% match_data: N*4 大小的矩阵
 function [H, inlierIdx] = ransacForDLT(match_data)
     % 首先将数据归一化
     [data, T1, T2] = warpNormalizeMatchData(match_data);
@@ -8,11 +9,8 @@ function [H, inlierIdx] = ransacForDLT(match_data)
     % 看作内点的最大偏移量 这里应该为距离的平方，和 distFcn 对应
     maxdistance = 0.1;
     [H, inlierIdx] = ransac(data, fitFcn, @distFcn, samplesize, maxdistance);
-    points1 = data(:, [1, 2])
-    points2 = data(:, [3, 4])
-    t = H * ([points1';ones(1,8)]);
-    t = (t./(t(3,:)))'
-
+    % 这里都是归一化后的数据真正的 H 还需要处理下
+    H = T2\H*T1;
 end
 
 
@@ -32,9 +30,5 @@ function distances = distFcn(model, data)
     x = points2(:, 1);
     y = points2(:, 2);
     % 然后计算距离 目标值和结果值的误差距离
-    deal_x-x
     distances  = (deal_x - x).^2 + (deal_y - y).^2;
-    % distances
-    sum(distances)
-    % size(distances)
 end
