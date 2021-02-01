@@ -1,13 +1,11 @@
 % 对匹配的数据进行 RANSAC ransac 使用 DLT 模型
-% match_data: N*4 大小的矩阵
-function [H, inlierIdx] = ransacForDLT(match_data)
+% matchinges: N*4 大小的矩阵
+% samplesize: 构成模型需要的点 至少需要四个点对
+% maxdistance: 看作内点的最大偏移量 这里应该为距离的平方，和 distFcn 对应
+function [H, inlierIdx] = ransacForDLT(matchinges, samplesize, maxdistance)
     % 首先将数据归一化
-    [data, T1, T2] = warpNormalizeMatchData(match_data);
+    [data, T1, T2] = warpNormalizeMatchData(matchinges);
     fitFcn = @dlt;
-    % 构成模型需要的点 至少需要四个点对
-    samplesize = 6;
-    % 看作内点的最大偏移量 这里应该为距离的平方，和 distFcn 对应
-    maxdistance = 0.1;
     [H, inlierIdx] = ransac(data, fitFcn, @distFcn, samplesize, maxdistance);
     % 这里都是归一化后的数据真正的 H 还需要处理下
     H = T2\H*T1;
