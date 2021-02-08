@@ -14,7 +14,7 @@ function H = dlt(matchinges)
     % 此时的点数据为列向量
     points1 = points1';
     points2 = points2';
-    n = size(points1, 1);
+    n = size(points1, 2);
     A = zeros(2*n, 9);
     for i = 1:n
         x_vec = points1(:, i)';
