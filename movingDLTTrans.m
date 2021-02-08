@@ -8,7 +8,7 @@ function I_trans = movingDLTTrans(I, matchinges)
     [centers, cubes] = divideImg(imgsize, C1, C2);
     % 计算每一个变形
     % 超参数设置
-    sigma_para = 30;
+    sigma_para = 15;
     lambda_para = 0.01;
     % 获取每一个中心点的单应矩阵
     H_all = getCenterDLT(centers, matchinges, sigma_para, lambda_para);
