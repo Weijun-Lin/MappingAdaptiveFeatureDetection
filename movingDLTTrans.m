@@ -1,26 +1,31 @@
 % 对 RANSAC 后的匹配点进行 moving DLT 变换
 function I_trans = movingDLTTrans(I, matchinges)
+    tic
     imgsize = size(I);
     % C1 为高 C2 为宽 这里适合宽更大的图像
-    C1 = 20;
-    C2 = 20;
+    C1 = 1;
+    C2 = 1;
     % 切分图像
     [centers, cubes] = divideImg(imgsize, C1, C2);
     % 计算每一个变形
     % 超参数设置
-    sigma_para = 15;
-    lambda_para = 0.01;
+    sigma_para = 18;
+    lambda_para = 0.00001;
     % 获取每一个中心点的单应矩阵
     H_all = getCenterDLT(centers, matchinges, sigma_para, lambda_para);
     % 获取每一个子块边界点的坐标 cubes_trans 每一个元素都是 2*4 大小的矩阵，代表 4 个点
     cubes_trans = getDLTCubes(H_all, cubes);
     % 根据 cubes_trans 获取变换后图像的大小（包含所有原图点）以及新图坐标系到原图坐标系的转换矩阵
     [imgsize, T] = getTransImgSize(cubes_trans);
-    imgsize
     % imgsize
+    H_all = updateHomography(H_all, cubes, cubes_trans);
+    toc
+    tic
     % 图像转换
-    % I_trans = uint8(transImgByH(I, imgsize, H_all, T, cubes_trans));
-
+    I_trans = uint8(transImgByH(I, imgsize, H_all, T, cubes_trans));
+    figure;
+    imshow(I_trans);
+    toc
 end
 
 % 为每一个中心点计算 DLT
@@ -51,11 +56,11 @@ end
 % H_all: 所有中心点的 H 矩阵，为元胞矩阵
 % cubes: 图像每个方块的 meshgrid 即 {X, Y}
 % cubes_trans: 和 H_all 相同大小的元胞矩阵，每个元素都是 2*4 的矩阵，每列为一个点
+% 因为单应的不连续性，所以这里将网格强制连续化，子网格多的时候，差距可以忽略
 function cubes_trans = getDLTCubes(H_all, cubes)
     [r, c] = size(H_all);
     x_mat = cubes{1};
     y_mat = cubes{2};
-    figure;
     % 获取边界点
     cubes_trans = cell(r, c);
     for i = 1:r
@@ -67,12 +72,35 @@ function cubes_trans = getDLTCubes(H_all, cubes)
             trans_points = H_all{i,j} * tar_points;
             trans_points = trans_points ./ trans_points(3, :);
             cubes_trans{i, j} = trans_points([1 2], :);
-            plot([trans_points(1,:) trans_points(1,1)], [trans_points(2,:) trans_points(2,1)]);
-            hold on
         end
     end
-    axis equal
-    hold off
+    % 这里修改原来有间隔的网格，强制修改为无间隔的
+    for i = 1:r-1
+        for j = 1:c-1
+            cubes_trans{i,j}(:, 2) = cubes_trans{i,j+1}(:, 1);
+            cubes_trans{i,j}(:, 3) = cubes_trans{i+1,j+1}(:, 1);
+            cubes_trans{i,j}(:, 4) = cubes_trans{i+1,j}(:, 1);
+        end
+    end
+    % 最后一行单独处理
+    for j = 1:c-1
+        cubes_trans{r,j}(:, 2) = cubes_trans{r,j+1}(:, 1);
+        cubes_trans{r,j}(:, 3) = cubes_trans{r,j+1}(:, 4);
+    end
+    % 最后一列也单独处理
+    for i = 1:r-1
+        cubes_trans{i,c}(:, 3) = cubes_trans{i+1, c}(:, 2);
+        cubes_trans{i,c}(:, 4) = cubes_trans{i+1, c}(:, 1);
+    end
+    figure;
+    for i = 1:r
+        for j = 1:c
+            trans_points = cubes_trans{i,j};
+            plot([trans_points(1,:) trans_points(1,1)], [trans_points(2,:) trans_points(2,1)]);
+            hold on;
+        end
+    end
+    hold off;
 end
 
 % 获取变换后图像的大小
@@ -175,4 +203,21 @@ function pixel_value = bilinearInterp(I, srccoord)
     B = I(t+1,s,:) + (x-s)*(I(t+1,s+1,:)-I(t+1,s,:));
     pixel_value = A + (y-t)*(B-A);
     % pixel_value
+end
+
+
+% 因为强制将单应后的网格连续化，所以需要重新计算单应矩阵
+function H_all = updateHomography(H_all, cubes, cubes_trans)
+    % 更改新的单应矩阵
+    x_mat = cubes{1};
+    y_mat = cubes{2};
+    [r, c] = size(H_all);
+    for i = 1:r
+        for j = 1:c
+            tar_points = [x_mat(i,j) x_mat(i,j+1) x_mat(i+1,j+1) x_mat(i+1,j);
+            y_mat(i,j) y_mat(i,j+1) y_mat(i+1,j+1) y_mat(i+1,j);];
+            cur_cubes = cubes_trans{i,j};
+            H_all{i,j} = dlt([tar_points' cur_cubes']);
+        end
+    end
 end

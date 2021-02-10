@@ -23,7 +23,7 @@
 %
 % 2010.08.17
 tic;
-file_img1 = './CAR5.tif';
+file_img1 = './untitled2.png';
 file_img2 = './CAR6.tif';
 imgOutVert = '1_350111imgOutVert.png';
 imgOutHori = '1_35011imgOutHori.png';
