@@ -3,13 +3,13 @@ function I_trans = movingDLTTrans(I, matchinges)
     tic
     imgsize = size(I);
     % C1 为高 C2 为宽 这里适合宽更大的图像
-    C1 = 1;
-    C2 = 1;
+    C1 = 50;
+    C2 = 50;
     % 切分图像
     [centers, cubes] = divideImg(imgsize, C1, C2);
     % 计算每一个变形
     % 超参数设置
-    sigma_para = 18;
+    sigma_para = 20;
     lambda_para = 0.00001;
     % 获取每一个中心点的单应矩阵
     H_all = getCenterDLT(centers, matchinges, sigma_para, lambda_para);
@@ -17,12 +17,13 @@ function I_trans = movingDLTTrans(I, matchinges)
     cubes_trans = getDLTCubes(H_all, cubes);
     % 根据 cubes_trans 获取变换后图像的大小（包含所有原图点）以及新图坐标系到原图坐标系的转换矩阵
     [imgsize, T] = getTransImgSize(cubes_trans);
-    % imgsize
+    mapping = getBackwardMapping(imgsize, cubes_trans, T);
+    % 更新单应变换
     H_all = updateHomography(H_all, cubes, cubes_trans);
     toc
     tic
     % 图像转换
-    I_trans = uint8(transImgByH(I, imgsize, H_all, T, cubes_trans));
+    I_trans = uint8(transImgByH(I, imgsize, H_all, T, mapping));
     figure;
     imshow(I_trans);
     toc
@@ -92,15 +93,15 @@ function cubes_trans = getDLTCubes(H_all, cubes)
         cubes_trans{i,c}(:, 3) = cubes_trans{i+1, c}(:, 2);
         cubes_trans{i,c}(:, 4) = cubes_trans{i+1, c}(:, 1);
     end
-    figure;
-    for i = 1:r
-        for j = 1:c
-            trans_points = cubes_trans{i,j};
-            plot([trans_points(1,:) trans_points(1,1)], [trans_points(2,:) trans_points(2,1)]);
-            hold on;
-        end
-    end
-    hold off;
+    % figure;
+    % for i = 1:r
+    %     for j = 1:c
+    %         trans_points = cubes_trans{i,j};
+    %         plot([trans_points(1,:) trans_points(1,1)], [trans_points(2,:) trans_points(2,1)]);
+    %         hold on;
+    %     end
+    % end
+    % hold off;
 end
 
 % 获取变换后图像的大小
@@ -126,8 +127,8 @@ function [imgsize, T] = getTransImgSize(cubes_trans)
     max_y = max(y_vec);
     min_y = min(y_vec);
     % 这里的 T 为新坐标系到原坐标系的变换矩阵
-    T = [1 0 min_x-1;0 1 min_y-1;0 0 1];
-    imgsize = [round(max_y - min_y + 1) round(max_x - min_x + 1)];
+    T = [1 0 floor(min_x)-1;0 1 floor(min_y)-1;0 0 1];
+    imgsize = [ceil(max_y - min_y + 1) ceil(max_x - min_x + 1)];
 end
 
 % 根据单应矩阵和使用逆向映射构造新的图
@@ -135,42 +136,26 @@ end
 % 对每一个坐标先通过 T 变换到原图坐标系
 % 然后判断所属的子图块，最后通过 H 逆映射回去
 % 使用双线性插值获得变换后的值
-function I_delta = transImgByH(I, imgsize, H_all, T, cubes_trans)
+function I_delta = transImgByH(I, imgsize, H_all, T, mapping)
     % 创建黑色底的新图像，并确定通道数
     I_size = size(I);
-    I_delta = zeros(imgsize);
-    if numel(I_size) == 3
-        I_delta = zeros([imgsize I_size(3)]);
-    end
+    newsize = I_size;
+    newsize([1 2]) = imgsize;
+    I_delta = zeros(newsize);
     % 遍历新图的每一个元素
     r = imgsize(1);
     c = imgsize(2);
+
+    % 这里是后向映射
     for i = 1:r
         for j = 1:c
-            % 计算在原图坐标系的坐标
-            coord = T * [j;i;1];
-            % 获取所属的单应子块
-            [rH, cH] = size(H_all);
-            for s = 1:rH
-                mark = false;
-                for t = 1:cH
-                    cur_cubes = cubes_trans{s,t};
-                    % 判断是否属于当前块
-                    in = inpolygon(coord(1), coord(2), cur_cubes(1,:), cur_cubes(2,:));
-                    if in
-                        mark = true;
-                        % (s,t) 为所属块，对其执行 H 的逆变换
-                        src_coord = H_all{s,t}\coord;
-                        src_coord = src_coord ./ src_coord(3,:);
-                        % src_coord
-                        % 双线性插值
-                        I_delta(i,j,:) = bilinearInterp(I, src_coord);
-                        break;
-                    end
-                end
-                if mark
-                    break;
-                end
+            pos = mapping{i,j};
+            if ~isempty(pos)
+                H = H_all{pos(1), pos(2)};
+                coord = T*[j;i;1];
+                coord = H\coord;
+                coord = coord ./ coord(3,:);
+                I_delta(i,j,:) = bilinearInterp(I, coord);
             end
         end
     end
@@ -196,12 +181,11 @@ function pixel_value = bilinearInterp(I, srccoord)
         return;
     end
     % 此时依据四个点做双线性插值
-    % 首先对坐标向零取整
     s = fix(srccoord(1));
     t = fix(srccoord(2));
-    A = I(t,s,:) + (x-s)*(I(t,s+1,:) - I(t,s,:));
-    B = I(t+1,s,:) + (x-s)*(I(t+1,s+1,:)-I(t+1,s,:));
-    pixel_value = A + (y-t)*(B-A);
+    k = [s+1-x x-s t+1-y y-t];
+    pixel_value = k(1)*k(3)*I(t,s,:) + k(2)*k(3)*I(t, s+1,:) +  ...
+                  k(1)*k(4)*I(t+1,s,:) + k(2)*k(4)*I(t+1,s+1,:);
     % pixel_value
 end
 
@@ -218,6 +202,28 @@ function H_all = updateHomography(H_all, cubes, cubes_trans)
             y_mat(i,j) y_mat(i,j+1) y_mat(i+1,j+1) y_mat(i+1,j);];
             cur_cubes = cubes_trans{i,j};
             H_all{i,j} = dlt([tar_points' cur_cubes']);
+        end
+    end
+end
+
+% 获取变换后每一个像素对应的变换索引
+function mapping = getBackwardMapping(imgsize, cubes_trans, T)
+    mapping = cell(imgsize);
+    [r,c] = size(cubes_trans);
+    for i = 1:r
+        for j = 1:c
+            cur_cubes = cubes_trans{i,j};
+            cur_cubes(3,:) = 1;
+            % 获得在新图中的坐标
+            cur_cubes = T\cur_cubes;
+            w = ceil(max(cur_cubes(1,:)) - min(cur_cubes(1,:)));
+            h = ceil(max(cur_cubes(2,:)) - min(cur_cubes(2,:)));
+            min_point = round([min(cur_cubes(1,:)) min(cur_cubes(2,:))]);
+            for s = min_point(2):min_point(2)+h
+                for t = min_point(1):min_point(1)+w
+                    mapping{s,t} = [i j];
+                end
+            end
         end
     end
 end
