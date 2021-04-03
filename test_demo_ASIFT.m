@@ -23,10 +23,11 @@
 %
 % 2010.08.17
 tic;
-file_img1 = './untitled2.png';
-file_img2 = './CAR6.tif';
-imgOutVert = '1_350111imgOutVert.png';
-imgOutHori = '1_35011imgOutHori.png';
+% file_img1 = "./DSC02933.JPG";
+file_img1 = "./CAR52.png";
+file_img2 = "./CAR6.png";
+imgOutVert = '2022imgOutVert.png';
+imgOutHori = '2022imgOutHori.png';
 matchings = 'C0_C2_35011_matchings.txt';
 keys1 = 'keys1.txt';
 keys2 = 'keys2.txt';

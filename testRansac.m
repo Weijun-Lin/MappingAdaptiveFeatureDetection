@@ -1,17 +1,20 @@
 % ---------- 测试dlt 的 ransac ---------------
 
 % 使用 ASIFT 获取图像对应匹配点
-file_img1 = "./CAR5.tif";
-file_img2 = "./CAR6.tif";
-% file_img1 = "./LEO1.tif";
-% file_img2 = "./LEO2.tif";
+file_img1 = "./CAR5.png";
+file_img2 = "./CAR6.png";
+% file_img1 = "./out3.png";
+% file_img2 = "./LEO2.png";
 % file_img1 = "./XMAS5.tif";
 % file_img2 = "./XMAS6.tif";
+% file_img1 = "./4.jpg";
+% file_img2 = "./5.jpg";
 
 % file_img1 = "./P1010517.JPG";
 % file_img2 = "./P1010520.JPG";
-% file_img1 = "./light1.png";
-% file_img2 = "./light2.png";
+% file_img1 = "./DSC02933.JPG";
+% file_img1 = "./out3.png";
+% file_img2 = "./DSC02934.JPG";
 imgOutVert = '1_350111imgOutVert.png';
 imgOutHori = '1_35011imgOutHori.png';
 matchings = 'C0_C2_35011_matchings.txt';
