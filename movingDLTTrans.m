@@ -3,8 +3,8 @@ function I_trans = movingDLTTrans(I, matchinges)
     tic
     imgsize = size(I);
     % C1 为高 C2 为宽 这里适合宽更大的图像
-    C1 = 50;
-    C2 = 50;
+    C1 = 25;
+    C2 = 25;
     % 切分图像
     [centers, cubes] = divideImg(imgsize, C1, C2);
     % 计算每一个变形
@@ -24,11 +24,12 @@ function I_trans = movingDLTTrans(I, matchinges)
     end
     mapping = getBackwardMapping(imgsize, cubes_trans, T);
     % 更新单应变换
-    H_all = updateHomography(H_all, cubes, cubes_trans);
+    H_all = updateHomography(H_all, cubes, cubes_trans, T);
+    save DLTTransParas.mat H_all C1 C2
     toc
     tic
     % 图像转换
-    I_trans = uint8(transImgByH(I, imgsize, H_all, T, mapping));
+    I_trans = transImgByH(I, imgsize, H_all, mapping);
     figure;
     imshow(I_trans);
     toc
@@ -131,8 +132,9 @@ function [imgsize, T] = getTransImgSize(cubes_trans)
     min_x = min(x_vec);
     max_y = max(y_vec);
     min_y = min(y_vec);
-    % 这里的 T 为新坐标系到原坐标系的变换矩阵
-    T = [1 0 floor(min_x)-1;0 1 floor(min_y)-1;0 0 1];
+    % 这里的 T 为平移到标准图像空间的变换矩阵
+    % T = [1 0 floor(min_x)-1;0 1 floor(min_y)-1;0 0 1];
+    T = [1 0 -min_x+1;0 1 -min_y+1;0 0 1];
     imgsize = [ceil(max_y - min_y + 1) ceil(max_x - min_x + 1)];
 end
 
@@ -141,7 +143,7 @@ end
 % 对每一个坐标先通过 T 变换到原图坐标系
 % 然后判断所属的子图块，最后通过 H 逆映射回去
 % 使用双线性插值获得变换后的值
-function I_delta = transImgByH(I, imgsize, H_all, T, mapping)
+function I_delta = transImgByH(I, imgsize, H_all, mapping)
     % 创建黑色底的新图像，并确定通道数
     I_size = size(I);
     newsize = I_size;
@@ -157,10 +159,10 @@ function I_delta = transImgByH(I, imgsize, H_all, T, mapping)
             pos = mapping{i,j};
             if ~isempty(pos)
                 H = H_all{pos(1), pos(2)};
-                coord = T*[j;i;1];
-                coord = H\coord;
+                % coord = T*[j;i;1];
+                coord = H\[j;i;1];
                 coord = coord ./ coord(3,:);
-                I_delta(i,j,:) = bilinearInterp(I, coord);
+                I_delta(i,j) = bilinearInterp(I, coord);
             end
         end
     end
@@ -182,21 +184,21 @@ function pixel_value = bilinearInterp(I, srccoord)
     end
     % 现在坐标已经在图像内部、或者边界，然后处理边界（图像右和下）避免插值时数组边界访问异常
     if x == c || y == r
-        pixel_value = I(x, y, :);
+        pixel_value = I(floor(x), floor(y));
         return;
     end
     % 此时依据四个点做双线性插值
     s = fix(srccoord(1));
     t = fix(srccoord(2));
     k = [s+1-x x-s t+1-y y-t];
-    pixel_value = k(1)*k(3)*I(t,s,:) + k(2)*k(3)*I(t, s+1,:) +  ...
-                  k(1)*k(4)*I(t+1,s,:) + k(2)*k(4)*I(t+1,s+1,:);
+    pixel_value = k(1)*k(3)*I(t,s) + k(2)*k(3)*I(t, s+1) +  ...
+                  k(1)*k(4)*I(t+1,s) + k(2)*k(4)*I(t+1,s+1);
     % pixel_value
 end
 
 
 % 因为强制将单应后的网格连续化，所以需要重新计算单应矩阵
-function H_all = updateHomography(H_all, cubes, cubes_trans)
+function H_all = updateHomography(H_all, cubes, cubes_trans, T)
     % 更改新的单应矩阵
     x_mat = cubes{1};
     y_mat = cubes{2};
@@ -206,7 +208,7 @@ function H_all = updateHomography(H_all, cubes, cubes_trans)
             tar_points = [x_mat(i,j) x_mat(i,j+1) x_mat(i+1,j+1) x_mat(i+1,j);
             y_mat(i,j) y_mat(i,j+1) y_mat(i+1,j+1) y_mat(i+1,j);];
             cur_cubes = cubes_trans{i,j};
-            H_all{i,j} = dlt([tar_points' cur_cubes']);
+            H_all{i,j} = T * dlt([tar_points' cur_cubes']);
         end
     end
 end
@@ -220,7 +222,7 @@ function mapping = getBackwardMapping(imgsize, cubes_trans, T)
             cur_cubes = cubes_trans{i,j};
             cur_cubes(3,:) = 1;
             % 获得在新图中的坐标
-            cur_cubes = T\cur_cubes;
+            cur_cubes = T*cur_cubes;
             w = ceil(max(cur_cubes(1,:)) - min(cur_cubes(1,:)));
             h = ceil(max(cur_cubes(2,:)) - min(cur_cubes(2,:)));
             min_point = round([min(cur_cubes(1,:)) min(cur_cubes(2,:))]);

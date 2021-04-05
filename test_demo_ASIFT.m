@@ -23,15 +23,15 @@
 %
 % 2010.08.17
 tic;
-% file_img1 = "./DSC02933.JPG";
-file_img1 = "./CAR52.png";
+% file_img1 = "./CAR5.png";
+file_img1 = "./untitled2.png";
 file_img2 = "./CAR6.png";
-imgOutVert = '2022imgOutVert.png';
-imgOutHori = '2022imgOutHori.png';
-matchings = 'C0_C2_35011_matchings.txt';
+imgOutVert = 'imgOutVert.png';
+imgOutHori = 'imgOutHori.png';
+matchings = 'matchings.txt';
 keys1 = 'keys1.txt';
 keys2 = 'keys2.txt';
-flag_resize = 1;
+flag_resize = 0;
 
 demo_ASIFT(file_img1, file_img2, imgOutVert, imgOutHori, matchings, keys1, keys2, flag_resize);
 

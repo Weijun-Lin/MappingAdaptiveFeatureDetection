@@ -8,6 +8,6 @@ src = transimg1;
 % t = t ./ t(3);
 % t = ceil(t);
 % transimg1(t(2), t(1))
-I = getMAConvImg(src, H, originSize, 5);
+I = getMAConvImg(src, H, originSize, 2);
 figure;
 imshow(I);

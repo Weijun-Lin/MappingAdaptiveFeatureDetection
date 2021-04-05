@@ -1,16 +1,16 @@
 clear
 load pointImg.mat
 load testTexture1.mat
-srcImg = testTexture1;
-% srcImg = pointImg;
+% srcImg = testTexture1;
+srcImg = pointImg;
 
 [h, w] = size(srcImg);
 in_points = [1 w w 1
             1 1 h h];
-out_points1 = [30 180 200 0;
+out_points1 = [60 180 200 0;
               1 -100 200 150];
-out_points2 = [0 200 150 50;
-               0 -50 200 150];
+% out_points1 = [36.1359  286.4508  212.9639   70.1237;
+% 15.8337   14.0885  288.6566  283.4212];
 
 
 TForm1 = fitgeotrans(in_points',out_points1','projective');
@@ -30,11 +30,12 @@ transimg1 = myimwarp(srcImg, H', 1, false, []);
 % transimg1 = imwarp(srcImg, TForm1, 'FillValues', 1);
 figure;
 % imshow(transimg2);
-imshow(invtransWidthConv(transimg1, H', size(srcImg)));
+invI = invtransWidthConv(transimg1, H', size(srcImg));
+imshow(imadjust(invI));
 figure
 imshow(transimg1);
 figure;
-I = imgaussfilt(srcImg, 5);
+I = imadjust(imgaussfilt(srcImg, 2));
 imshow(I);
 
 
@@ -58,6 +59,6 @@ save transimgs.mat transimg1 TForm1 originSize
 function I = invtransWidthConv(src, H, imgsize)
     invH = inv(H);
     % TForm = projective2d(invH);
-    I = imgaussfilt(src, 5);
+    I = imgaussfilt(src, 2);
     I = myimwarp(I, invH,0,true,imgsize);
 end

@@ -278,14 +278,14 @@ function vals = convOperate(srcI, x0_, kernel)
     % vals = A * B * C;
 end
 
-% 插值核函数
-function w = bicubicFunc(wx)
-    wx = abs(wx);
-    if wx <= 1
-        w = 1 - 2*(wx^2) + wx^3;
-    elseif wx < 2
-        w = 4 - 8*wx + 5*(wx^2) - wx^3;
-    else
-        w = 0;
-    end
-end
+% % 插值核函数
+% function w = bicubicFunc(wx)
+%     wx = abs(wx);
+%     if wx <= 1
+%         w = 1 - 2*(wx^2) + wx^3;
+%     elseif wx < 2
+%         w = 4 - 8*wx + 5*(wx^2) - wx^3;
+%     else
+%         w = 0;
+%     end
+% end

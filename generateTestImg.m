@@ -3,7 +3,7 @@
 % 1. 生成点图
 s = 200;
 p_num = 3;
-p_size = 15;
+p_size = 7;
 pointImg = zeros(s);
 tar_coord = linspace(1, s, p_num+2);
 tar_coord = tar_coord(2:p_num+1);
