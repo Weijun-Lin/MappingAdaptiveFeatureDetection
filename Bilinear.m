@@ -7,11 +7,13 @@ function pixel_value = Bilinear(srcimg, srccoord, backcolor)
     [r, c] = size(srcimg);
     % 坐标在图像外的返回
     if x > c || y > r || x < 1 || y < 1
+        % x
+        % y
         return;
     end
     % 现在坐标已经在图像内部、或者边界，然后处理边界（图像右和下）避免插值时数组边界访问异常
     if x == c || y == r
-        pixel_value = srcimg(floor(x), floor(y));
+        pixel_value = srcimg(floor(y), floor(x));
         return;
     end
     % 此时依据四个点做双线性插值 首先对坐标向零取整

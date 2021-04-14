@@ -1,9 +1,9 @@
 % 生成测试图像
 
-% 1. 生成点图
-s = 200;
-p_num = 3;
-p_size = 7;
+% 生成标准点图测试图像
+s = 200; % 图像大小
+p_num = 6;  % 平均生成 p_num*p_num 规模的点
+p_size = 9; % 点的大小
 pointImg = zeros(s);
 tar_coord = linspace(1, s, p_num+2);
 tar_coord = tar_coord(2:p_num+1);

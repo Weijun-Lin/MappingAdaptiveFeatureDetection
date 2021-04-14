@@ -1,3 +1,5 @@
+% 理论验证阶段，自己设置图像扭曲匹配点
+
 load pointImg.mat
 % load 
 
@@ -16,7 +18,7 @@ figure;
 imshow(pointImg);
 hold on
 scatter(p(:,1), p(:,2));
-axis([-350 550 -350 550]);
+axis([-250 450 -250 450]);
 axis on
 
 % 按行获取对应点

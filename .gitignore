@@ -11,3 +11,7 @@
 !*.m
 # !*.mat
 !README.md
+# 保留ASIFT.exe
+!demo_ASIFT.exe
+# 以及毕设报告
+!2017141461358_林伟俊_映射适应的视觉特征提取方法设计与实现.docx

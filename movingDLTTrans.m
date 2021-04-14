@@ -3,14 +3,15 @@ function I_trans = movingDLTTrans(I, matchinges)
     tic
     imgsize = size(I);
     % C1 为高 C2 为宽 这里适合宽更大的图像
-    C1 = 25;
-    C2 = 25;
+    C1 = 1;
+    C2 = 1;
     % 切分图像
     [centers, cubes] = divideImg(imgsize, C1, C2);
     % 计算每一个变形
     % 超参数设置
-    sigma_para = 10;
-    lambda_para = 0.0001;
+    % sigma_para = 10;
+    sigma_para = 13;
+    lambda_para = 0.001;
     % 获取每一个中心点的单应矩阵
     H_all = getCenterDLT(centers, matchinges, sigma_para, lambda_para);
     % 获取每一个子块边界点的坐标 cubes_trans 每一个元素都是 2*4 大小的矩阵，代表 4 个点
@@ -18,14 +19,14 @@ function I_trans = movingDLTTrans(I, matchinges)
     % 根据 cubes_trans 获取变换后图像的大小（包含所有原图点）以及新图坐标系到原图坐标系的转换矩阵
     [imgsize, T] = getTransImgSize(cubes_trans);
     imgsize
-    if max(imgsize) > 3000
+    if max(imgsize) > 6000
         I_trans = 0;
         return;
     end
     mapping = getBackwardMapping(imgsize, cubes_trans, T);
     % 更新单应变换
     H_all = updateHomography(H_all, cubes, cubes_trans, T);
-    save DLTTransParas.mat H_all C1 C2
+    save DLTTransParas.mat H_all C1 C2 mapping
     toc
     tic
     % 图像转换

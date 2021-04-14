@@ -4,25 +4,40 @@
 % I1 -> I2: H
 % 当前的目的是将 I2 使用映射适应卷积抗混叠处理为 I1
 
-load pointImg.mat
-load matchinges.mat
-load testTexture1.mat
-src = pointImg;
-tarImg = movingDLTTrans(src, matchinges);
-tarImgGauss = imgaussfilt(tarImg, 2);
-load DLTTransParas.mat
-invH_all = calInvHAll(H_all);
+load matchings.mat
+src = imread("./CAR5.png");
+% src = imread("./CAR5.png");
+src = rgb2gray(src);
+src = im2double(src);
 
-[h, w] = size(pointImg);
+tarImg = movingDLTTrans(src, matchings);
+
+theta = 2;
+[h, w] = size(tarImg);
+scales = 1;
+S = [scales 0 0;0 scales 0;0 0 1];
+S_ = [1/scales 0 0;0 1/scales 0;0 0 1];
+ImgBig = imresize(src, scales);
+ImgGauss = imgaussfilt(ImgBig, theta);
+invH_all = calInvHAll(H_all);
+load DLTTransParas.mat
 
 I = zeros(h, w);
-theta = 2;
-for i = 1:w
-    for j = 1:h
-        x0 = [i;j];
-        [r,c] = getCubesIndex(w, h, C1, C2, i, j);
-        I(j,i) = getValByMAConv(tarImg, invH_all{r,c}, x0, theta);
-        % I(j,i) = getValWithoutMAConv(tarImgGauss, H_all{r,c}, x0);
+size(I)
+for i = 15:314
+    if mod(i, 50) == 0
+        i
+    end
+    for j = 630:1003
+        pos = mapping{i,j};
+        if isempty(pos)
+            continue;
+        end
+        x0 = [j;i];
+        % 映射适应卷积
+        I(i,j) = getValByMAConv(ImgBig, H_all{pos(1),pos(2)}*S_, x0, theta, S*invH_all{pos(1),pos(2)});
+        % 直接高斯
+        % I(i,j) = getValWithoutMAConv(tarImgGauss, S*invH_all{pos(1),pos(2)}, x0);
     end
 end
 
@@ -37,21 +52,6 @@ function invH_all = calInvHAll(H_all)
         for j = 1:c
             invH_all{i,j} = inv(H_all{i,j});
         end
-    end
-end
-
-
-% 获取模拟图上某个点对应的坐标
-function [r, c] = getCubesIndex(w, h, C1, C2, x, y)
-    delta_w = w / C2;
-    delta_h = h / C1;
-    c = floor((x-1) / delta_w);
-    r = floor((y-1) / delta_h);
-    if c == 0
-        c = 1;
-    end
-    if r == 0
-        r = 1;
     end
 end
 

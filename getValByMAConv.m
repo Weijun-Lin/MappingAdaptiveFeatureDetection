@@ -2,8 +2,7 @@
 % x0 是模拟图上的点
 % H 为原图到模拟图的映射
 % I 为原图
-function val = getValByMAConv(I, H, x0, theta)
-    invH = inv(H);
+function val = getValByMAConv(I, H, x0, theta, invH)
     x0_ = invH * [x0(1);x0(2);1];
     x0_ = x0_ ./ x0_(3);
     [h, w] = size(I);
@@ -13,7 +12,12 @@ function val = getValByMAConv(I, H, x0, theta)
     end
     kernelSize = 8*theta;
     RI = getRI(x0, x0_, kernelSize/2, invH);
+    if RI(1) > 500 || RI(2) > 500
+        val = 0;
+        return;
+    end
     d_kernel = getDFormKernel(x0, x0_, RI, H, kernelSize, theta);
+    % d_kernel
     val = convOperate(I, x0_, d_kernel);
 end
 
@@ -53,9 +57,13 @@ end
 
 % 获取模拟图上某个具体位置 x0 对应的变形卷积核                  
 function d_kernel = getDFormKernel(x0, x0_, RI, H, k_size, c)
-    mid_h = floor(RI(2));
     mid_w = floor(RI(1));
+    mid_h = floor(RI(2));
     d_kernel = zeros(2*mid_h+1, 2*mid_w+1);
+    Det = det(H);
+    g_ = H(3,1);
+    h_ = H(3,2);
+    i_ = H(3,3);
     for i = -mid_w:mid_w
         for j = -mid_h:mid_h
             % 映射回模拟图像坐标
@@ -78,10 +86,16 @@ function d_kernel = getDFormKernel(x0, x0_, RI, H, k_size, c)
             % 否则得到其在标准高斯核上的值
             Gc = 1/(2*pi*c*c) * exp(-(x^2 + y^2)/(2*c*c));
             % 并获取雅可比行列式的值
-            g_ = H(3,1);
-            h_ = H(3,2);
-            i_ = H(3,3);
-            Jh = abs(det(H)/(g_*x_ + h_*y_ + i_)^3);
+            Jh = abs(Det/(g_*x_ + h_*y_ + i_)^3);
+            % if i == 0 && j == 0
+            %     x
+            %     y
+            %     x_
+            %     y_
+            %     x0
+            %     Gc
+            %     Jh
+            % end
             
             % Jh = abs(det(H)/(g_*hx(1) + h_*hx(2) + i_)^3);
             d_kernel(mid_h+1+j,i+1+mid_w) = Gc*Jh;
