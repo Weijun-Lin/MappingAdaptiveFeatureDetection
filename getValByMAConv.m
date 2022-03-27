@@ -1,29 +1,47 @@
 % 根据模拟图上的一个点以及这个点的单应映射，获取其映射适应卷积
-% x0 是模拟图上的点
-% H 为原图到模拟图的映射
-% I 为原图
+% @Params:
+%     - x0 是模拟图上的点
+%     - H 为原图到模拟图的映射
+%     - I 为原图
+% @Returns:
+%     - val: 采样得到的像素值
+
 function val = getValByMAConv(I, H, x0, theta, invH)
+    % x0_ 为原图上的点
     x0_ = invH * [x0(1);x0(2);1];
     x0_ = x0_ ./ x0_(3);
     [h, w] = size(I);
+    % val 为填充的像素值
     val = 0;
     if x0_(1) < 0 || x0_(2) < 0 || x0_(1) > w+1 || x0_(2) > h+1
         return;
     end
+    % 卷积核大小
     kernelSize = 8*theta;
+    % 变形卷积核的边界大小 RI 为宽高的一半
     RI = getRI(x0, x0_, kernelSize/2, invH);
+    % 下面这个我也不知道当初为什么加扭曲太厉害的应该
     if RI(1) > 500 || RI(2) > 500
         val = 0;
         return;
     end
+    % 获取变形卷积核
     d_kernel = getDFormKernel(x0, x0_, RI, H, kernelSize, theta);
-    % d_kernel
+    % 到原图去插值
     val = convOperate(I, x0_, d_kernel);
 end
 
+% 获取变形卷积核大小
+% @Params:
+%     - x0_vec: 模拟图的带采样点坐标
+%     - x0_src: 原图上的对应点
+%     - k_size_mid: 卷积大小的一半
+%     - invH: 模拟图到原图的映射
+% @Returns:
+%     - RI: 变形卷积核的大小（宽高的一半）
+
 function RI = getRI(x0_vec, x0_src, k_size_mid, invH)
-    % xv = [1 w w 1];
-    % yv = [1 1 h h];
+    % 获取原图上的四个点 srcPoints
     x0 = x0_vec(1);
     y0 = x0_vec(2);
     testPoints = [x0-k_size_mid x0+k_size_mid x0+k_size_mid x0-k_size_mid;
@@ -31,11 +49,7 @@ function RI = getRI(x0_vec, x0_src, k_size_mid, invH)
                   1 1 1 1];
     srcPoints = invH * testPoints;
     srcPoints = srcPoints ./ srcPoints(3,:);
-    % figure;
-    % plot(srcPoints(1,:), srcPoints(2,:));
-    % x0_vec
-    % srcPoints
-    % 返回 RI：[w h]
+    % 找到最值
     min_x = min(srcPoints(1,:));
     min_y = min(srcPoints(2,:));
     max_x = max(srcPoints(1,:));
@@ -55,22 +69,37 @@ function RI = getRI(x0_vec, x0_src, k_size_mid, invH)
     RI = [w, h];
 end
 
-% 获取模拟图上某个具体位置 x0 对应的变形卷积核                  
+% 获取模拟图上某个具体位置 x0 对应的变形卷积核
+% @Params:
+%     - x0_: 原图上的点
+%     - x0_: 模拟图带采样点
+%     - RI: 变形卷积核的大小
+%     - H: 原图到模拟图的映射
+%     - k_size: 模拟图上标准卷积核大小
+%     - c: 标准差
+% @Returns:
+%     - d_kernel: 变形卷积核
+
 function d_kernel = getDFormKernel(x0, x0_, RI, H, k_size, c)
+    % 卷积核大小的一半
     mid_w = floor(RI(1));
     mid_h = floor(RI(2));
+    % 变形卷积核
     d_kernel = zeros(2*mid_h+1, 2*mid_w+1);
+    % 单应的雅可比计算准备
     Det = det(H);
     g_ = H(3,1);
     h_ = H(3,2);
     i_ = H(3,3);
+    % 遍历变形卷积核
     for i = -mid_w:mid_w
         for j = -mid_h:mid_h
-            % 映射回模拟图像坐标
+            % 映射回模拟图像坐标得到 hx
             x_ = x0_(1) + i;
             y_ = x0_(2) + j;
             hx = H * [x_;y_;1];
             hx = hx ./ hx(3);
+            % x_vec 为相对于采样点的偏移量
             x_vec = x0 - hx([1 2],:);
             % 这里的 xy 是相对与 x0 的坐标
             x = x_vec(1);
@@ -80,30 +109,22 @@ function d_kernel = getDFormKernel(x0, x0_, RI, H, k_size, c)
             if x < -mid_size || x > mid_size || y < -mid_size || y > mid_size
                 continue;
             end
-            % x_vec
-            % x_
-            % y_
             % 否则得到其在标准高斯核上的值
             Gc = 1/(2*pi*c*c) * exp(-(x^2 + y^2)/(2*c*c));
-            % 并获取雅可比行列式的值
+            % 并获取雅可比行列式的值 这里用的乘法，即用原图到模拟图的正映射
             Jh = abs(Det/(g_*x_ + h_*y_ + i_)^3);
-            % if i == 0 && j == 0
-            %     x
-            %     y
-            %     x_
-            %     y_
-            %     x0
-            %     Gc
-            %     Jh
-            % end
-            
-            % Jh = abs(det(H)/(g_*hx(1) + h_*hx(2) + i_)^3);
             d_kernel(mid_h+1+j,i+1+mid_w) = Gc*Jh;
         end
     end
 end
 
 % 计算Wn*Wn内插值的值
+% @Params:
+%     - srcI: 原图
+%     - x0_: 原图上的浮点坐标 需要插值
+%     - kernel: 变形卷积核
+% @Returns:
+%     - vals: 插值之后获得的颜色向量
 function vals = convOperate(srcI, x0_, kernel)
     % kernel
     [H, W] = size(srcI);
@@ -163,6 +184,7 @@ function vals = convOperate(srcI, x0_, kernel)
         if flagX == 2
             srcpatch = padarray(srcpatch, [0 deltaX], 'replicate', 'pre');
         end
+        % 有时候会有问题 似乎是那种很恶心的映射
         try
             tempIval(i) = sum(sum(srcpatch .* kernel));
         catch ErrorInfo 

@@ -30,8 +30,11 @@ tic;
 % file_img1 = "./P1010517.JPG";
 % file_img2 = "./P1010520.JPG";
 % file_img1 = "./DSC02933.JPG";
-file_img1 = "./CAR5.png";
-% file_img1 = "./out2.png";
+% file_img1 = "./XMAS5.png";
+% file_img1 = "./XMAS_out1.png";
+% file_img1 = "./LEO_out2.png";
+% file_img1 = "./LEO_out1.png";
+file_img1 = "./CAR_out4.png";
 file_img2 = "./CAR8.png";
 
 imgOutVert = 'imgOutVertRANSAC.png';

@@ -11,24 +11,23 @@ src = rgb2gray(src);
 src = im2double(src);
 
 tarImg = movingDLTTrans(src, matchings);
-
-theta = 2;
+load DLTTransParas.mat
+theta = 1;
 [h, w] = size(tarImg);
-scales = 1;
+scales = 3;
 S = [scales 0 0;0 scales 0;0 0 1];
 S_ = [1/scales 0 0;0 1/scales 0;0 0 1];
 ImgBig = imresize(src, scales);
 ImgGauss = imgaussfilt(ImgBig, theta);
 invH_all = calInvHAll(H_all);
-load DLTTransParas.mat
 
 I = zeros(h, w);
 size(I)
-for i = 15:314
+for i = 1:h
     if mod(i, 50) == 0
         i
     end
-    for j = 630:1003
+    for j = floor(w/2):w
         pos = mapping{i,j};
         if isempty(pos)
             continue;
@@ -37,7 +36,7 @@ for i = 15:314
         % 映射适应卷积
         I(i,j) = getValByMAConv(ImgBig, H_all{pos(1),pos(2)}*S_, x0, theta, S*invH_all{pos(1),pos(2)});
         % 直接高斯
-        % I(i,j) = getValWithoutMAConv(tarImgGauss, S*invH_all{pos(1),pos(2)}, x0);
+        % I(i,j) = getValWithoutMAConv(ImgGauss, S*invH_all{pos(1),pos(2)}, x0);
     end
 end
 

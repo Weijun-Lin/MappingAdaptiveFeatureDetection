@@ -3,14 +3,14 @@ function I_trans = movingDLTTrans(I, matchinges)
     tic
     imgsize = size(I);
     % C1 为高 C2 为宽 这里适合宽更大的图像
-    C1 = 1;
-    C2 = 1;
+    C1 = 50;
+    C2 = 50;
     % 切分图像
     [centers, cubes] = divideImg(imgsize, C1, C2);
     % 计算每一个变形
     % 超参数设置
     % sigma_para = 10;
-    sigma_para = 13;
+    sigma_para = 10;
     lambda_para = 0.001;
     % 获取每一个中心点的单应矩阵
     H_all = getCenterDLT(centers, matchinges, sigma_para, lambda_para);
